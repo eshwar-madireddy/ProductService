@@ -5,6 +5,7 @@ import com.example.productservice.dtos.FakeStoreProductResponseDto;
 import com.example.productservice.exceptions.ProductNotFoundException;
 import com.example.productservice.models.Product;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -14,16 +15,25 @@ import org.springframework.web.client.RestTemplate;
 import java.util.ArrayList;
 import java.util.List;
 
-@Service
+@Service("FakeStoreAPI")
 public class FakeStoreProductService implements ProductService{
-    RestTemplate restTemplate;
+    private RestTemplate restTemplate;
+    private RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
-    public FakeStoreProductService(RestTemplate restTemplate) {
+    public FakeStoreProductService(RestTemplate restTemplate , RedisTemplate<String, Object> redisTemplate) {
         this.restTemplate = restTemplate;
+        this.redisTemplate = redisTemplate;
     }
     @Override
     public Product getProductById(Long id) throws ProductNotFoundException {
+        Product productFromCache = (Product) redisTemplate
+                .opsForValue().get(String.valueOf(id));
+
+        if(productFromCache != null) {
+            return productFromCache;
+        }
+
         FakeStoreProductResponseDto responseDto = restTemplate.getForObject(
                 "https://fakestoreapi.com/products/" + id,
                 FakeStoreProductResponseDto.class
@@ -31,7 +41,11 @@ public class FakeStoreProductService implements ProductService{
 
         if(responseDto==null)
             throw new ProductNotFoundException("Product with Id "+id +" not found!");
-        return responseDto.toProduct();
+        Product returnProduct = responseDto.toProduct();
+        redisTemplate
+                .opsForValue()
+                .set(String.valueOf(id), returnProduct);
+        return returnProduct;
     }
 
     public List<Product> getProducts() throws ProductNotFoundException {

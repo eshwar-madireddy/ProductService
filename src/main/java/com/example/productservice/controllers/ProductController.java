@@ -10,6 +10,7 @@ import com.example.productservice.models.Product;
 import com.example.productservice.services.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -24,18 +25,19 @@ public class ProductController {
     private AuthenticationCommons authenticationCommons;
 
     @Autowired
-    public ProductController(@Qualifier("ProductService") ProductService productService, AuthenticationCommons authenticationCommons) {
+    public ProductController(@Qualifier("FakeStoreAPI") ProductService productService, AuthenticationCommons authenticationCommons, RedisTemplate<String, Object> redisTemplate) {
         this.productService = productService;
         this.authenticationCommons = authenticationCommons;
     }
 
     @GetMapping("/Product/{id}")
     public ResponseEntity<ProductResponseDto> getProductById(@PathVariable("id") Long id, @RequestHeader("Authorization") String token) throws ProductNotFoundException, InvalidToken {
-        UserDto userDto = authenticationCommons
-                .validateToken(token);
-        if(userDto == null) {
-            throw new InvalidToken("Invalid Token");
-        }
+//        UserDto userDto = authenticationCommons
+//                .validateToken(token);
+//        if(userDto == null) {
+//            throw new InvalidToken("Invalid Token");
+//        }
+
         Product product = productService.getProductById(id);
         ProductResponseDto response = ProductResponseDto.from(product);
         ResponseEntity<ProductResponseDto> resp =
